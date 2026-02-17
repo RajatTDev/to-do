@@ -1,0 +1,42 @@
+name: Node.js CI/CD to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests (optional)
+        run: npm test --if-present
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/to-do || git clone https://github.com/${{ github.repository }}.git
+            cd to-do
+            git pull origin main
+            npm install --production
+
+            echo "DB_URL=${{ secrets.MONGO_URI }}" > .env
+            echo "NODE_ENV=${{ secrets.NODE_ENV }}" >> .env
+            echo "PORT=${{ secrets.APP_PORT }}" >> .env
+
+            pm2 reload toDoBackend || pm2 start index.js --name toDoBackend
