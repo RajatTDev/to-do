@@ -30,7 +30,12 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ubuntu/to-do || git clone https://github.com/${{ github.repository }}.git
+           cd /home/ubuntu
+
+            # Clone repo if not exists
+            if [ ! -d "to-do" ]; then
+              git clone https://github.com/${{ github.repository }}.git
+            fi
             cd to-do
             git pull origin main
             npm install --production
